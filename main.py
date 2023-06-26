@@ -3,17 +3,15 @@ import requests
 import os
 import dotenv
 import random
+import json
 
 dotenv.load_dotenv()
 
-client_id = os.getenv("CLIENT_ID")
-client_secret = os.getenv("CLIENT_SECRET")
 access_token = os.getenv("ACCESS_TOKEN")
 
 app = fastapi.FastAPI()
 
-# Use Genius api to get a random song
-
+# Use Genius API to get a random song
 @app.get("/random_song/{playListLength}")
 def randomSong(playListLength: int):
     songList = []
@@ -21,10 +19,16 @@ def randomSong(playListLength: int):
         songID = random.randint(1, 9195000)
         headers = {'Authorization': f'Bearer {access_token}'}
         url = f"https://api.genius.com/songs/{songID}"
-        songList.append(requests.get(url, headers=headers).json()["response"]["song"]["title"] + " by " + requests.get(url, headers=headers).json()["response"]["song"]["primary_artist"]["name"])
-    # Correctly format the song list
-    for i in range(len(songList)):
-        songList[i] = str(i + 1) + ". " + songList[i] + "\n"
-    songList = "".join(songList)
-    return songList
+        response = requests.get(url, headers=headers).json()
 
+        try:
+            title = response["response"]["song"]["title"]
+            artist = response["response"]["song"]["primary_artist"]["name"]
+            song = {"title": title, "artist": artist}
+            songList.append(song)
+        except KeyError:
+            print(f"Error: Unable to retrieve song information for ID {songID}.")
+            continue
+
+    # Return the song list as a JSON response
+    return songList
